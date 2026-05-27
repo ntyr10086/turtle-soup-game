@@ -76,7 +76,7 @@ class TurtleSoupGame:
         },
         {
             "title": "脚步聲",
-            "story": "每次單逐走路都能聽到兩個人的腳步聲，有一次終於變成一個人的了，我卻後悔了。",
+            "story": "每次單獨走路都能聽到兩個人的腳步聲，有一次終於變成一個人的了，我卻後悔了。",
             "answer": "我是盲人，一直聽到兩個腳步聲是因為有導盲犬。那次導盲犬死了，我很後悔",
             "difficulty": "困難",
             "tags": ["推理", "感人"]
@@ -100,8 +100,8 @@ class TurtleSoupGame:
         # 設定API
         genai.configure(api_key=api_key)
         
-        # 🛠️ 【已修復】將 model_name 改為符合 SDK 0.3.2 規範的 model 參數！
-        self.model = genai.GenerativeModel(model='gemini-1.5-flash')
+        # 使用Gemini 1.5 Flash模型（快速且經濟）
+        self.model = genai.GenerativeModel('gemini-1.5-flash')
         
         # 遊戲狀態
         self.current_puzzle: Optional[Dict] = None  # 當前題目
@@ -112,13 +112,12 @@ class TurtleSoupGame:
         self.attempts = 0
         self.hints_used = 0  # 使用的提示次數
         
-    def start_new_game(self, mode: str = "story", puzzle_index: Optional[int] = None):
+    def start_new_game(self, puzzle_index: Optional[int] = None):
         """
         開始新遊戲
         
         Args:
-            mode: 遊戲模式 ("story" 或 "simple")
-            puzzle_index: 指定題目索引（故事模式用）
+            puzzle_index: 指定題目索引（可選）
         """
         # 重置狀態
         self.chat_history = []
@@ -126,21 +125,20 @@ class TurtleSoupGame:
         self.attempts = 0
         self.hints_used = 0
         
-        if mode == "story":
-            # 故事模式：使用真實海龜湯題目
-            self.story_mode = True
-            if puzzle_index is not None and 0 <= puzzle_index < len(self.STORY_PUZZLES):
-                self.current_puzzle = self.STORY_PUZZLES[puzzle_index]
-            else:
-                self.current_puzzle = random.choice(self.STORY_PUZZLES)
-            
-            self.secret_answer = self.current_puzzle["answer"]
-            
-            # 添加開場訊息
-            opening = f"""🎮 遊戲開始！
+        # 故事模式：使用真實海龜湯題目
+        self.story_mode = True
+        if puzzle_index is not None and 0 <= puzzle_index < len(self.STORY_PUZZLES):
+            self.current_puzzle = self.STORY_PUZZLES[puzzle_index]
+        else:
+            self.current_puzzle = random.choice(self.STORY_PUZZLES)
+        
+        self.secret_answer = self.current_puzzle["answer"]
+        
+        # 添加開場訊息
+        opening = f"""🎮 遊戲開始！
 
 📖 **{self.current_puzzle['title']}**
-難度：{self.current_puzzle['difficulty']} | 標籤：{', '.join(self.current_puzzle['tags'])}
+難度：{self.current_puzzle['difficulty']}
 
 **故事情境：**
 {self.current_puzzle['story']}
@@ -152,19 +150,6 @@ class TurtleSoupGame:
 ✨ **特殊指令**：
 - 輸入「引導」獲得思路提示
 - 輸入「總結」讓我整理目前的線索"""
-            
-        else:
-            # 簡單模式：使用簡單答案（為了測試）
-            self.story_mode = False
-            self.current_puzzle = None
-            simple_topics = ["籃球", "蘋果", "獅子", "雨傘", "腳踏車"]
-            self.secret_answer = random.choice(simple_topics)
-            
-            opening = f"""🎮 遊戲開始！（簡單模式）
-
-我已經想好一個謎底了，請開始提問吧！
-
-💡 提示：你可以問任何「是非題」，我只會回答：是、不是、不完全是、或與題目無關。"""
         
         self.chat_history.append({
             "role": "assistant",
@@ -209,7 +194,7 @@ class TurtleSoupGame:
             # 建立完整的對話歷史
             full_conversation = self.build_conversation_context()
             
-            # 🛠️ 【優化優化】配合 0.3.2 版本的初始化對話策略，動態套用 system_instruction
+            # 添加系統提示（作為第一條訊息）
             if len(full_conversation) == 0:
                 full_conversation.insert(0, {
                     "role": "user",
@@ -335,14 +320,10 @@ class TurtleSoupGame:
             "hints_used": self.hints_used,
             "is_game_over": self.is_game_over,
             "chat_length": len(self.chat_history),
-            "story_mode": self.story_mode
+            "story_mode": True,  # 現在只有故事模式
+            "puzzle_title": self.current_puzzle["title"],
+            "difficulty": self.current_puzzle["difficulty"],
+            "tags": self.current_puzzle["tags"]
         }
-        
-        if self.story_mode and self.current_puzzle:
-            stats.update({
-                "puzzle_title": self.current_puzzle["title"],
-                "difficulty": self.current_puzzle["difficulty"],
-                "tags": self.current_puzzle["tags"]
-            })
         
         return stats
