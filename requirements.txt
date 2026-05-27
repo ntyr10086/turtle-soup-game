@@ -1,8 +1,9 @@
 # 核心依賴
-streamlit==1.31.0
+streamlit>=1.35.0  # 升級 Streamlit 以支援新版 Python 
 google-generativeai==0.3.2
 python-dotenv==1.0.0
+pillow>=10.4.0     # 強制要求較新的 Pillow 版本
 
 # 可選增強
 # requests==2.31.0  # 如果需要HTTP請求
-# pandas==2.0.0     # 如果需要數據處理
+# pandas==2.0.0      # 如果需要數據處理
