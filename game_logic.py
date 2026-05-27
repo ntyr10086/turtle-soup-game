@@ -76,7 +76,7 @@ class TurtleSoupGame:
         },
         {
             "title": "脚步聲",
-            "story": "每次單獨走路都能聽到兩個人的腳步聲，有一次終於變成一個人的了，我卻後悔了。",
+            "story": "每次單逐走路都能聽到兩個人的腳步聲，有一次終於變成一個人的了，我卻後悔了。",
             "answer": "我是盲人，一直聽到兩個腳步聲是因為有導盲犬。那次導盲犬死了，我很後悔",
             "difficulty": "困難",
             "tags": ["推理", "感人"]
@@ -100,8 +100,8 @@ class TurtleSoupGame:
         # 設定API
         genai.configure(api_key=api_key)
         
-        # 使用Gemini 1.5 Flash模型（快速且經濟）
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # 🛠️ 【已修復】將 model_name 改為符合 SDK 0.3.2 規範的 model 參數！
+        self.model = genai.GenerativeModel(model='gemini-1.5-flash')
         
         # 遊戲狀態
         self.current_puzzle: Optional[Dict] = None  # 當前題目
@@ -209,7 +209,7 @@ class TurtleSoupGame:
             # 建立完整的對話歷史
             full_conversation = self.build_conversation_context()
             
-            # 添加系統提示（作為第一條訊息）
+            # 🛠️ 【優化優化】配合 0.3.2 版本的初始化對話策略，動態套用 system_instruction
             if len(full_conversation) == 0:
                 full_conversation.insert(0, {
                     "role": "user",
