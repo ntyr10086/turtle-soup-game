@@ -106,7 +106,7 @@ def initialize_session_state():
 
 def render_header():
     """渲染頁面標題"""
-    st.markdown('<p class="main-title">🐢 AI海龜湯攻防戰 🛡️</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">🐢 AI海龜湯遊戲</p>', unsafe_allow_html=True)
     st.markdown("---")
 
 
@@ -115,55 +115,43 @@ def render_sidebar():
     with st.sidebar:
         st.header("🎮 遊戲控制")
         
-        # 遊戲模式選擇
-        game_mode = st.radio(
-            "選擇遊戲模式",
-            ["🎭 故事模式（真實海龜湯）", "🎯 簡單模式（測試用）"],
-            index=0
+        # 題目選擇
+        st.markdown("📖 **選擇題目**")
+        
+        puzzles = st.session_state.game.STORY_PUZZLES
+        
+        difficulty_filter = st.selectbox(
+            "難度篩選",
+            ["全部", "簡單", "中等", "困難"]
         )
         
-        mode = "story" if "故事" in game_mode else "simple"
+        # 過濾題目
+        if difficulty_filter == "全部":
+            filtered_puzzles = puzzles
+        else:
+            filtered_puzzles = [p for p in puzzles if p["difficulty"] == difficulty_filter]
         
-        # 故事模式：顯示題目選擇
+        # 顯示題目列表
+        puzzle_options = [
+            f"{p['title']} ({p['difficulty']})"
+            for p in filtered_puzzles
+        ]
+        
         puzzle_index = None
-        if mode == "story":
-            st.markdown("---")
-            st.subheader("📖 選擇題目")
+        if puzzle_options:
+            selected = st.selectbox("選擇一個題目", ["🎲 隨機選擇"] + puzzle_options)
             
-            # 按難度分類
-            puzzles = st.session_state.game.STORY_PUZZLES
-            
-            difficulty_filter = st.selectbox(
-                "難度篩選",
-                ["全部", "簡單", "中等", "困難"]
-            )
-            
-            # 過濾題目
-            if difficulty_filter == "全部":
-                filtered_puzzles = puzzles
-            else:
-                filtered_puzzles = [p for p in puzzles if p["difficulty"] == difficulty_filter]
-            
-            # 顯示題目列表
-            puzzle_options = [
-                f"{p['title']} ({p['difficulty']}) - {', '.join(p['tags'][:2])}"
-                for p in filtered_puzzles
-            ]
-            
-            if puzzle_options:
-                selected = st.selectbox("選擇一個題目", ["隨機選擇"] + puzzle_options)
-                
-                if selected != "隨機選擇":
-                    # 找到選中題目的索引
-                    selected_title = selected.split(" (")[0]
-                    puzzle_index = next(
-                        (i for i, p in enumerate(puzzles) if p["title"] == selected_title),
-                        None
-                    )
+            if selected != "🎲 隨機選擇":
+                # 找到選中題目的索引
+                selected_title = selected.split(" (")[0]
+                puzzle_index = next(
+                    (i for i, p in enumerate(puzzles) if p["title"] == selected_title),
+                    None
+                )
         
         # 開始遊戲按鈕
-        if st.button("🎯 開始新遊戲", use_container_width=True, type="primary"):
-            st.session_state.game.start_new_game(mode=mode, puzzle_index=puzzle_index)
+        if st.button("🎯 開始遊戲", use_container_width=True, type="primary"):
+            st.session_state.game.start_new_game(puzzle_index=puzzle_index)
             st.session_state.defense.reset_defense()
             st.session_state.game_started = True
             st.rerun()
@@ -172,77 +160,49 @@ def render_sidebar():
         
         # 遊戲狀態
         if st.session_state.game_started:
-            st.header("📊 遊戲狀態")
+            st.header("📊 狀態")
             stats = st.session_state.game.get_game_stats()
             
-            # 顯示題目資訊（故事模式）
+            # 顯示題目資訊
             if stats.get("story_mode"):
-                st.info(f"**{stats.get('puzzle_title', '未知')}**\n\n難度: {stats.get('difficulty', '未知')}")
+                st.info(f"**{stats.get('puzzle_title', '未知')}**\n難度: {stats.get('difficulty', '未知')}")
             
             col1, col2 = st.columns(2)
             with col1:
                 st.metric("提問次數", stats['attempts'])
             with col2:
-                st.metric("使用提示", stats.get('hints_used', 0))
-            
-            # 防禦系統狀態
-            st.markdown("---")
-            st.header("🛡️ 防禦狀態")
-            defense_stats = st.session_state.defense.get_defense_stats()
-            
-            st.metric("可疑嘗試", defense_stats['suspicious_attempts'], 
-                     delta=f"上限: {st.session_state.defense.max_suspicious_attempts}")
-            
-            if defense_stats['is_locked']:
-                st.error("🚫 系統已鎖定！請重新開始遊戲")
+                st.metric("提示次數", stats.get('hints_used', 0))
         
         st.markdown("---")
         
-        # 遊戲說明
+        # 遊戲規則
         with st.expander("📖 遊戲規則"):
             st.markdown("""
-            ### 海龜湯遊戲規則：
+            ### 如何遊戲：
             
-            **故事模式**：
-            - AI會給你一個神秘的故事情境
-            - 你需要透過提問找出背後的真相
-            - AI只會回答：**是**、**不是**、**不完全是**、**與題目無關**
+            1. AI 會給你一個故事情境
+            2. 你需要透過提問找出真相
+            3. AI 只會回答：**是**、**不是**、**不完全是**、**與題目無關**
             
-            **特殊指令**：
+            ### 特殊指令：
             - 輸入「引導」：獲得思路提示
-            - 輸入「總結」：整理目前的線索
-            
-            ### 注意事項：
-            - ⚠️ 問題限制在200字以內
-            - ⏱️ 1分鐘內最多30次提問
-            - 🛡️ 系統會偵測並阻擋惡意攻擊
+            - 輸入「總結」：整理已知線索
             """)
         
-        with st.expander("🔒 防禦機制"):
+        with st.expander("💡 遊戲技巧"):
             st.markdown("""
-            本系統採用**極致防禦**：
-            - ✅ 輸入安全檢查
-            - ✅ 惡意關鍵字過濾
-            - ✅ 請求頻率限制
-            - ✅ 輸出內容檢測
-            - ✅ 異常行為追蹤
-            - ✅ System Prompt多重防護
-            """)
-        
-        with st.expander("💡 通關秘籍"):
-            st.markdown("""
-            1. 從大方向開始：先確定故事的大框架
-            2. 注意時間順序：事件發生的順序很重要
-            3. 尋找隱藏人物：故事中可能有沒明說的人
-            4. 善用引導功能：卡關時可以要求提示
-            5. 定期總結線索：整理思路更容易找到答案
+            1. 從大方向開始
+            2. 注意事件順序
+            3. 尋找隱藏人物
+            4. 善用引導功能
+            5. 定期整理線索
             """)
 
 
 def render_chat_history():
     """渲染對話歷史"""
     if not st.session_state.game_started:
-        st.info("👈 請點選側邊欄的「開始新遊戲」按鈕來開始！")
+        st.info("👈 點左邊側欄的「開始遊戲」按鈕來開始！")
         return
     
     # 顯示對話歷史
@@ -348,12 +308,12 @@ def handle_user_input():
         
         # === 防禦層級 4：生成防護System Prompt ===
         story_context = ""
-        if st.session_state.game.story_mode and st.session_state.game.current_puzzle:
+        if st.session_state.game.current_puzzle:
             story_context = st.session_state.game.current_puzzle["story"]
         
         system_prompt = PromptGuard.generate_system_prompt(
             st.session_state.game.secret_answer,
-            st.session_state.game.story_mode,
+            True,  # 始終為 story_mode
             story_context
         )
         
@@ -403,7 +363,7 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style='text-align: center; color: #666;'>
-        <p>🛡️ 極致防禦版本 | 多層防護機制 | 2026學年度期末專題</p>
+        <p>🐢 AI海龜湯遊戲 | 2026學年度期末專題</p>
     </div>
     """, unsafe_allow_html=True)
 
